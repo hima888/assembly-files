@@ -1,0 +1,162 @@
+title  Fibonacci                                  
+.model small
+.stack 100h
+
+.data
+
+msg1 db "Please enter the number of terms in the fibonacci sequence to display:",0DH,0AH,"$" ;message to user
+msg2 db "Displaying Fibonacci sequence",0DH,0AH,"$" ; message to user
+msg3 db ", ","$"    ; formating - coma
+num1 dw 0        ;this is a numeric variable
+num2 dw  0      ; this is a numeric variable
+input dw  0         ; this is a numeric variable
+fibn_1 DW 1       ; word numeric value n-1 value
+fibn_2 DW 0       ; word numeric value n-2 value
+fib DW 0        ; word numeric value
+temp DW 0    ; word numeric value
+saveCount DW 0  ;counter storage
+
+.code    
+
+main proc
+    mov   ax,@data       ; set up data segment
+    mov   ds,ax
+
+mov   ah,9              ; send message with instructions for user
+mov   dx,offset msg1
+int   21h            
+
+    call keyin          ;gets user input
+SUB AL, 48      ;changes ASCII value into numeric value for further processing
+mov num1 , AX       ;saves user input to variable num1
+call keyin          ;gets user input
+SUB AL, 48      ;changes ASCII value into numeric value for further processing
+mov num2 , AX       ;saves user input to variable num2, so now we have both digits
+
+;multiplying num1 10 times
+
+MOV  CX, 10
+repeat1:            ; loop 10 times
+    MOV AX, NUM1    ;copies value of num1 to AX
+    ADD input, AX   ;adds value from AX
+    DEC CX      ;decrements the counter
+    JNZ repeat1 ;loops until counter = 0                                                                  
+
+MOV AX, num2        ;adding the value from num2 so if user entered 83, so it was num1=8 num2=3, then we multiplied 8x10=80, so we add 80+3 and we get 83
+ADD input, AX
+
+call newLine
+mov   ah,9              ; send informative message to user regarding displaying the sequence
+mov   dx,offset msg2
+int   21h 
+call newLine
+
+call displayFib
+
+call newLine
+mov   ax,4C00h       ; return to DOS
+    int   21h
+
+main endp
+
+
+newLine proc            ;procedure displays new line
+mov dx,0Dh      ;line feed
+mov ah,2
+int 21h  
+mov dx,0Ah      ;carriage return
+mov ah,2
+int 21h
+ret
+newLine endp
+
+
+
+
+keyin proc
+mov ah, 1 ; getting a key from the keyboard 
+int 21h 
+ret
+keyin endp
+
+displayFib proc
+;display zero as a 0'th term
+MOV DX, 30h         ; move value 30 hexadecimal to DX, which represents 0
+call display
+MOV AX, input   
+CMP AX, 0        ;if the input is 0 in hexadecimal ASCII value then jump to finish
+JE finish_it
+
+mov   ah,9              ; formating - coma
+mov   dx,offset msg3
+int   21h       
+
+;display the 1st term
+MOV DX, 31h         ; move value 31 hexadecimal to DX, which represents 1
+call display
+CMP input, 1        ;if the input is 1 in hexadecimal ASCII value then jump to finish
+JE finish_it
+
+MOV CX, input       ;intializing counter, knowing that first 2 terms were displayed already
+SUB CX, 2
+
+repeat:
+    mov   ah,9              ; formating - coma
+    mov   dx,offset msg3
+    int   21h       
+
+    MOV AX, fibn_2        ; calculating the n'th term of a sequence    n = (n-1) + (n-2) 
+    ADD AX, fibn_1
+    MOV fib, AX
+    MOV DX, fib
+    MOV saveCount, CX       ;saving the state of the counter as it will be modified in the displayNum
+    call displayNum
+    ;display the n'th term (current term)
+    MOV CX, saveCount       ;restoring state of the counter
+    MOV AX, fibn_1        ; n-1 in the next round of a loop will be n-2
+    MOV fibn_2, AX
+    MOV AX, fib         ;n'th term in the next round will be n-1
+    MOV fibn_1, AX
+    DEC  CX             ;decrementing counter
+    CMP CX, 1
+    JL  repeat          ; loop until counter = 0
+
+finish_it:
+
+ret
+displayFib endp
+
+
+displayNum proc     ;display numbers including these with more than one     digit
+
+MOV AX, fib ;copying fib to temp
+MOV temp, AX
+MOV CX,0        ;initializing counter to 0
+loop1:
+    ;dividng fib by 10 and pushing reminder on the stock
+    INC CX          ;incrementing counter
+    MOV  ax, temp
+    MOV bx, 10
+    SUB dx, dx              ;set dx to zero
+    DIV bx          ;BX will contain integer division result and DX remainder
+    PUSH DX
+    MOV temp, BX        ;temp will hold value of itself integer devided by 10
+    JNZ loop1
+
+loop2:
+    POP DX
+    ADD DX, 30h
+    call display
+    JNZ loop2       ;loop until all digits on stack are popped and counter =0
+
+ret
+displayNum endp
+
+
+display proc        ; display of a single character
+mov ah, 6
+int 21h
+ret
+display endp
+
+end  main
